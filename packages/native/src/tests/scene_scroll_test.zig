@@ -668,6 +668,26 @@ test "Scene scroll requests resolve against the layout of the next frame" {
     try testing.expectEqual(@as(f64, 10), try offset(f, box));
 }
 
+test "Scene scroll relative deltas past the start do not pile up before a frame" {
+    const f = try Fixture.init(testing.allocator, 12, 6, .{});
+    defer f.deinit();
+    var rows: [20]context.Handle = undefined;
+    const box = try rowBox(f, c.OT_SCENE_SCROLL_FOLLOW_NONE, &rows);
+    try present(f);
+    try testing.expectEqual(@as(f64, 0), try offset(f, box));
+    // Four steps up at the start, then one step down, all before the next frame:
+    // the steps up stop at the start, so the step down moves the view.
+    for (0..4) |_| _ = try f.owner.sceneScrollTo(box, .{ 0, -2 }, .{ true, true }, true);
+    _ = try f.owner.sceneScrollTo(box, .{ 0, 2 }, .{ true, true }, true);
+    try present(f);
+    try testing.expectEqual(@as(f64, 2), try offset(f, box));
+    // The end already stops a pile-up: steps down past it, then one step up.
+    for (0..20) |_| _ = try f.owner.sceneScrollTo(box, .{ 0, 2 }, .{ true, true }, true);
+    _ = try f.owner.sceneScrollTo(box, .{ 0, -2 }, .{ true, true }, true);
+    try present(f);
+    try testing.expectEqual(@as(f64, 14), try offset(f, box));
+}
+
 test "Scene scroll anchor wins over sticky follow, inside nested boxes too" {
     const f = try Fixture.init(testing.allocator, 12, 6, .{});
     defer f.deinit();

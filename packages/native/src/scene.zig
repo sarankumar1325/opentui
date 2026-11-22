@@ -1485,9 +1485,10 @@ pub const Scene = struct {
         state.reveal = null;
         var positions: [2]f64 = undefined;
         for (0..2) |axis| {
-            // A relative delta adds to a pending target; the end stands for the last max.
+            // A relative delta adds to a pending target; the end stands for the last max and
+            // the start for a target before it, so steps past the start don't pile up.
             const pending = state.target[axis] orelse state.offset[axis];
-            const base = if (pending == std.math.inf(f64)) state.max[axis] else pending;
+            const base = if (pending == std.math.inf(f64)) state.max[axis] else @max(0, pending);
             positions[axis] = if (relative[axis]) base + target[axis] else target[axis];
             if (reapply and !(relative[axis] and target[axis] == 0)) state.target[axis] = state.targetOf(axis, positions[axis]);
             // A scroll to the end ends a held anchor, so the view reaches the end.
